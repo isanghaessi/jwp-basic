@@ -36,7 +36,7 @@ public class LogInServlet extends HttpServlet {
 		}
 
 		HttpSession session = req.getSession(true);
-		session.setAttribute(LOG_IN_SESSION_KEY, user);
+		session.setAttribute(LOG_IN_SESSION_KEY, user.getUserId());
 
 		resp.sendRedirect("/user/list");
 	}
