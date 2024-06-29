@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import core.db.DataBase;
 import core.mvc.Controller;
+import next.dao.UserDao;
 import next.model.User;
 
 public class CreateUserController implements Controller {
@@ -19,7 +20,13 @@ public class CreateUserController implements Controller {
                 req.getParameter("email"));
         log.debug("User : {}", user);
 
-        DataBase.addUser(user);
+		UserDao userDao = new UserDao();
+		try {
+			userDao.insert(user);
+		} catch (Exception e) {
+			log.error(e.getMessage());
+		}
+
         return "redirect:/";
     }
 }
