@@ -13,6 +13,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import core.jdbc.ConnectionManager;
+import core.jdbc.JdbcTemplate;
 import next.model.User;
 
 public class UserDao {
@@ -25,7 +26,7 @@ public class UserDao {
 		parameterMap.put(3, user.getName());
 		parameterMap.put(4, user.getEmail());
 
-		return executeUpdate(sql, parameterMap);
+		return JdbcTemplate.executeUpdate(sql, parameterMap);
 	}
 
 	public int update(User user) throws SQLException {
@@ -38,13 +39,13 @@ public class UserDao {
 		parameterMap.put(4, user.getEmail());
 		parameterMap.put(5, user.getUserId());
 
-		return executeUpdate(sql, parameterMap);
+		return JdbcTemplate.executeUpdate(sql, parameterMap);
 	}
 
 	public List<User> findAll() throws SQLException {
 		String sql = "SELECT userId, password, name, email FROM USERS";
 
-		return executeQuery(User.class, sql);
+		return JdbcTemplate.executeQuery(User.class, sql);
 	}
 
 	public User findByUserId(String userId) throws SQLException {
@@ -53,69 +54,8 @@ public class UserDao {
 		Map<Integer, String> parameterMap = new HashMap<>();
 		parameterMap.put(1, userId);
 
-		return executeQuery(User.class, sql, parameterMap).stream()
+		return JdbcTemplate.executeQuery(User.class, sql, parameterMap).stream()
 			.findFirst()
 			.orElse(null);
-	}
-
-	private int executeUpdate(String sql, Map<Integer, String> parameterMap) {
-		try (Connection connection = ConnectionManager.getConnection();
-			 PreparedStatement preparedStatement = connection.prepareStatement(sql);) {
-			if (Objects.nonNull(parameterMap)) {
-				for (Map.Entry<Integer, String> parameterEntry : parameterMap.entrySet()) {
-					preparedStatement.setString(parameterEntry.getKey(), parameterEntry.getValue());
-				}
-			}
-
-			return preparedStatement.executeUpdate();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private <T> List<T> executeQuery(Class<T> clazz, String sql) {
-		return executeQuery(clazz, sql, null);
-	}
-
-	private <T> List<T> executeQuery(Class<T> clazz, String sql, Map<Integer, String> parameterMap) {
-		ResultSet resultSet = null;
-
-		try (Connection connection = ConnectionManager.getConnection();
-			 PreparedStatement preparedStatement = connection.prepareStatement(sql);) {
-			if (Objects.nonNull(parameterMap)) {
-				for (Map.Entry<Integer, String> parameterEntry : parameterMap.entrySet()) {
-					preparedStatement.setString(parameterEntry.getKey(), parameterEntry.getValue());
-				}
-			}
-
-			resultSet = preparedStatement.executeQuery();
-
-			List<T> resultList = new ArrayList<>();
-
-			if (resultSet.next()) {
-				T result = clazz.getDeclaredConstructor().newInstance();
-				for (Method method : clazz.getDeclaredMethods()) {
-					if (method.getName().startsWith("set")) {
-						String columnName = method.getName().substring(3);
-						columnName = Character.toLowerCase(columnName.charAt(0)) + columnName.substring(1);
-						method.invoke(result, resultSet.getObject(columnName));
-					}
-				}
-
-				resultList.add(result);
-			}
-
-			return resultList;
-		} catch (Exception exception) {
-			throw new RuntimeException(exception);
-		} finally {
-			if (Objects.nonNull(resultSet)) {
-				try {
-					resultSet.close();
-				} catch (SQLException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		}
 	}
 }
